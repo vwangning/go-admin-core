@@ -12,9 +12,15 @@ import (
 
 var _redis *redis.Client
 
+var _custerRedis *redis.ClusterClient
+
 // GetRedisClient 获取redis客户端
 func GetRedisClient() *redis.Client {
 	return _redis
+}
+
+func GetCusterRedisClient() *redis.ClusterClient {
+	return _custerRedis
 }
 
 // SetRedisClient 设置redis客户端
@@ -26,14 +32,15 @@ func SetRedisClient(c *redis.Client) {
 }
 
 type RedisConnectOptions struct {
-	Network    string `yaml:"network" json:"network"`
-	Addr       string `yaml:"addr" json:"addr"`
-	Username   string `yaml:"username" json:"username"`
-	Password   string `yaml:"password" json:"password"`
-	DB         int    `yaml:"db" json:"db"`
-	PoolSize   int    `yaml:"pool_size" json:"pool_size"`
-	Tls        *Tls   `yaml:"tls" json:"tls"`
-	MaxRetries int    `yaml:"max_retries" json:"max_retries"`
+	Network    string   `yaml:"network" json:"network"`
+	Addr       string   `yaml:"addr" json:"addr"`
+	Addrs      []string `yaml:"addrs" json:"addrs"`
+	Username   string   `yaml:"username" json:"username"`
+	Password   string   `yaml:"password" json:"password"`
+	DB         int      `yaml:"db" json:"db"`
+	PoolSize   int      `yaml:"pool_size" json:"pool_size"`
+	Tls        *Tls     `yaml:"tls" json:"tls"`
+	MaxRetries int      `yaml:"max_retries" json:"max_retries"`
 }
 
 type Tls struct {

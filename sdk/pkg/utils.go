@@ -2,13 +2,13 @@ package pkg
 
 import (
 	"errors"
+	"golang.org/x/crypto/bcrypt"
 	"log"
 	"runtime"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -19,6 +19,7 @@ const (
 
 func CompareHashAndPassword(e string, p string) (bool, error) {
 	err := bcrypt.CompareHashAndPassword([]byte(e), []byte(p))
+
 	if err != nil {
 		return false, err
 	}

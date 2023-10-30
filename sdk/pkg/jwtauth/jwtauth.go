@@ -2,14 +2,18 @@ package jwtauth
 
 import (
 	"crypto/rsa"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"gitee.com/zhaochuninhefei/gmgo/sm2"
+	"gitee.com/zhaochuninhefei/gmgo/x509"
+	"gitee.com/zhaochuninhefei/zcutils-go/zctoken"
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v4"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v4"
 )
 
 const JwtPayloadKey = "JWT_PAYLOAD"
@@ -451,7 +455,7 @@ func (mw *GinJWTMiddleware) LoginHandler(c *gin.Context) {
 		mw.unauthorized(c, 400, mw.HTTPStatusMessageFunc(err, c))
 		return
 	}
-	// Create the token
+	//Create the token
 	token := jwt.New(jwt.GetSigningMethod(mw.SigningAlgorithm))
 	claims := token.Claims.(jwt.MapClaims)
 	if mw.PayloadFunc != nil {
@@ -459,10 +463,20 @@ func (mw *GinJWTMiddleware) LoginHandler(c *gin.Context) {
 			claims[key] = value
 		}
 	}
+
 	expire := mw.TimeFunc().Add(mw.Timeout)
+
 	claims["exp"] = expire.Unix()
 	claims["orig_iat"] = mw.TimeFunc().Unix()
-	tokenString, err := mw.signedString(token)
+
+	//tokenString, err := mw.signedString(token)
+
+	//创建新的国密码的token
+
+	// 从pem文件读取私钥
+	privKey, err := x509.ReadPrivateKeyFromPemFile("/Users/wangning/GolandProjects/zcutils-go/testdata/sm2_pri_key.pem", nil)
+
+	tokenString, err := zctoken.BuildTokenWithGM(claims, time.Time{}, privKey.(*sm2.PrivateKey))
 
 	if err != nil {
 		mw.unauthorized(c, http.StatusOK, mw.HTTPStatusMessageFunc(ErrFailedTokenCreation, c))
@@ -529,7 +543,10 @@ func (mw *GinJWTMiddleware) RefreshToken(c *gin.Context) (string, time.Time, err
 	newClaims["exp"] = expire.Unix()
 	newClaims["orig_iat"] = mw.TimeFunc().Unix()
 	tokenString, err := mw.signedString(newToken)
+	// 从pem文件读取私钥
+	privKey, err := x509.ReadPrivateKeyFromPemFile("/Users/wangning/GolandProjects/zcutils-go/testdata/sm2_pri_key.pem", nil)
 
+	tokenString, err = zctoken.BuildTokenWithGM(claims, time.Time{}, privKey.(*sm2.PrivateKey))
 	if err != nil {
 		return "", time.Now(), err
 	}
@@ -676,17 +693,55 @@ func (mw *GinJWTMiddleware) ParseToken(c *gin.Context) (*jwt.Token, error) {
 		return nil, err
 	}
 
-	return jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
-		if jwt.GetSigningMethod(mw.SigningAlgorithm) != t.Method {
-			return nil, ErrInvalidSigningAlgorithm
-		}
-		if mw.usingPublicKeyAlgo() {
-			return mw.pubKey, nil
-		}
-		c.Set("JWT_TOKEN", token)
+	// 解析token 目标是返回一个type Token struct {
+	//	Raw       string                 // The raw token.  Populated when you Parse a token
+	//	Method    SigningMethod          // The signing method used or to be used
+	//	Header    map[string]interface{} // The first segment of the token
+	//	Claims    Claims                 // The second segment of the token
+	//	Signature string                 // The third segment of the token.  Populated when you Parse a token
+	//	Valid     bool                   // Is the token valid?  Populated when you Parse/Verify a token
+	//}的结构体
 
-		return mw.Key, nil
-	}, jwt.WithJSONNumber())
+	// 从pem文件读取公钥
+	pubKey, err := x509.ReadPublicKeyFromPemFile("/Users/wangning/GolandProjects/zcutils-go/testdata/sm2_pub_key.pem")
+
+	payloadsAfterCheck, err := zctoken.CheckTokenWithGM(token, pubKey.(*sm2.PublicKey))
+
+	jsonPayloads, _ := json.Marshal(payloadsAfterCheck)
+
+	s := string(jsonPayloads)
+	fmt.Print(s)
+	st := &jwt.Token{
+		Raw:    token, // 设置原始令牌数据
+		Method: nil,   // 设置签名方法
+		Header: map[string]interface{}{
+			"alg": "SM2-SM3", // 设置头部信息，这里使用SM2-SM3算法
+			"typ": "JWT",     // 设置头部信息，这里使用SM2-SM3算法
+		},
+		Claims:    jwt.MapClaims{},
+		Signature: "your_signature_data", // 设置签名数据
+		Valid:     true,                  // 设置令牌的有效性
+	}
+	var claims jwt.MapClaims
+	err = json.Unmarshal([]byte(jsonPayloads), &claims)
+	if err != nil {
+		fmt.Println("JSON解析错误:", err)
+	}
+	st.Claims = claims
+	return st, err
+
+	//return jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+	//	if jwt.GetSigningMethod(mw.SigningAlgorithm) != t.Method {
+	//		return nil, ErrInvalidSigningAlgorithm
+	//	}
+	//	if mw.usingPublicKeyAlgo() {
+	//		return mw.pubKey, nil
+	//	}
+	//	c.Set("JWT_TOKEN", token)
+	//
+	//	return mw.Key, nil
+	//}, jwt.WithJSONNumber())
+
 }
 
 // ParseTokenString parse jwt token string

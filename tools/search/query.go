@@ -34,9 +34,8 @@ func ResolveSearchQuery(driver string, q interface{}, condition Condition) {
 	var ok bool
 	var t *resolveSearchTag
 
-	var sep = "`"
 	if driver == Postgres {
-		sep = "\""
+
 	}
 
 	for i := 0; i < qType.NumField(); i++ {
