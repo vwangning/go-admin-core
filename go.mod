@@ -84,4 +84,3 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-replace gitee.com/zhaochuninhefei/zcutils-go v0.0.8 => ../zcutils-go
