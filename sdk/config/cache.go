@@ -31,18 +31,18 @@ func getClusterRedisClient(redisOptions *RedisConnectOptions) (*redis.ClusterCli
 
 // Setup 构造cache 顺序 集群redis >redis > 其他 > memory
 func (e Cache) Setup() (storage.AdapterCache, error) {
-	if e.Redis.Addrs != nil {
-		options, err := e.Redis.GetRedisOptions()
-		if err != nil {
-			return nil, err
-		}
-		r, err := cache.NewCusterRedis(GetCusterRedisClient(), e.Redis.Addrs, options)
-		if err != nil {
-			return nil, err
-		}
-
-		return r, nil
-	}
+	//if e.Redis.Addrs != nil {
+	//	options, err := e.Redis.GetRedisOptions()
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	r, err := cache.NewCusterRedis(GetCusterRedisClient(), e.Redis.Addrs, options)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	return r, nil
+	//}
 	if e.Redis != nil {
 		options, err := e.Redis.GetRedisOptions()
 		if err != nil {
