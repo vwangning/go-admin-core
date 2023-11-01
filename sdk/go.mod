@@ -109,4 +109,4 @@ require (
 	gorm.io/driver/sqlserver v1.4.1 // indirect
 )
 
-//replace github.com/go-admin-team/go-admin-core => ../
+
